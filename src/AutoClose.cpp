@@ -12,10 +12,26 @@ namespace AutoClose {
             constexpr REL::ID ReleaseRef{38742};
             constexpr REL::ID GetDistance{63359};
             constexpr REL::ID RequestExit{117439};  // Exit button request
+            constexpr REL::ID GetScene{44954};
+            constexpr REL::ID AllowCancelInSpeechChallenge{909589};
+            constexpr REL::ID AllowCancelInSceneSelection{909586};
         }
 
+        // MenuTopicManager
         constexpr std::size_t kSpeakerHandleOffset = 0x20;
+        constexpr std::size_t kSceneChoiceCountOffset = 0x40;
+        constexpr std::size_t kSpeechChallengeOffset = 0x80;
         constexpr std::size_t kInDialogueOffset = 0xF8;
+
+        // PlayerCharacter and BGSScene
+        constexpr std::size_t kPlayerFlagsOffset = 0x208;
+        constexpr std::uint32_t kInSceneFlag = 1u << 3;
+        constexpr std::size_t kPlayerScenesOffset = 0xC8;
+        constexpr std::size_t kSceneTemplateOffset = 0xB0;
+        constexpr std::size_t kSceneFlagsOffset = 0xB8;
+        constexpr std::uint32_t kPlayerCannotExitFlag = 1u << 5;
+
+        constexpr std::size_t kSettingValue = 0x8;
 
         constexpr float kNoDistance = 1.0e30f;
         constexpr auto kInterval = std::chrono::milliseconds{100};
@@ -26,6 +42,7 @@ namespace AutoClose {
         using ReleaseRef_t = void (*)(void*);
         using GetDistance_t = float (*)(const void*, const void*, bool);
         using RequestExit_t = void (*)();
+        using GetScene_t = const std::byte* (*)(const void*);
 
         struct Game {
             const std::byte* const* menuTopicManager;
@@ -33,6 +50,9 @@ namespace AutoClose {
             ReleaseRef_t releaseRef;
             GetDistance_t getDistance;
             RequestExit_t requestExit;
+            GetScene_t getScene;
+            const std::uint8_t* allowCancelInSpeechChallenge;
+            const std::uint8_t* allowCancelInSceneSelection;
         };
 
         Game g_game{};
@@ -93,6 +113,31 @@ namespace AutoClose {
             return std::isfinite(distance) && distance < kNoDistance ? distance : -1.0f;
         }
 
+        // Same test as the game's bCanExitDialogueState, which shows the Exit button.
+        [[nodiscard]] bool CanExit(const std::byte* a_manager) {
+            if (*reinterpret_cast<const void* const*>(a_manager + kSpeechChallengeOffset)) {
+                return *g_game.allowCancelInSpeechChallenge != 0;
+            }
+
+            const auto player = reinterpret_cast<const std::byte*>(RE::PlayerCharacter::GetSingleton());
+            if (player && (*reinterpret_cast<const std::uint32_t*>(player + kPlayerFlagsOffset) & kInSceneFlag)) {
+                const auto scenes = *reinterpret_cast<const void* const*>(player + kPlayerScenesOffset);
+                if (const auto scene = g_game.getScene(scenes)) {
+                    const auto source = *reinterpret_cast<const std::byte* const*>(scene + kSceneTemplateOffset);
+                    const auto flags =
+                        *reinterpret_cast<const std::uint32_t*>((source ? source : scene) + kSceneFlagsOffset);
+                    if (flags & kPlayerCannotExitFlag) {
+                        return false;
+                    }
+                }
+            }
+
+            if (*reinterpret_cast<const std::int32_t*>(a_manager + kSceneChoiceCountOffset) != 0) {
+                return *g_game.allowCancelInSceneSelection != 0;
+            }
+            return true;
+        }
+
         void RequestExit() {
             if (const auto tasks = SFSE::GetTaskInterface()) {
                 tasks->AddTask([] { g_game.requestExit(); });
@@ -117,6 +162,9 @@ namespace AutoClose {
             reinterpret_cast<ReleaseRef_t>(ID::ReleaseRef.address()),
             reinterpret_cast<GetDistance_t>(ID::GetDistance.address()),
             reinterpret_cast<RequestExit_t>(ID::RequestExit.address()),
+            reinterpret_cast<GetScene_t>(ID::GetScene.address()),
+            reinterpret_cast<const std::uint8_t*>(ID::AllowCancelInSpeechChallenge.address() + kSettingValue),
+            reinterpret_cast<const std::uint8_t*>(ID::AllowCancelInSceneSelection.address() + kSettingValue),
         };
         g_enabled = true;
         g_debug = a_settings.debugLog;
@@ -168,9 +216,12 @@ namespace AutoClose {
 
         const bool leaving = !g_session.tooFarOnOpen || distance > g_session.minDistance + g_tolerance;
         if (distance > g_maxDistance && leaving) {
+            g_session.nextCheck = now + kRetryDelay;
+            if (!CanExit(manager)) {
+                return;
+            }
             g_lastExitSpeaker = speaker;
             g_lastExitAt = now;
-            g_session.nextCheck = now + kRetryDelay;
             RequestExit();
             if (g_debug) {
                 REX::INFO("AutoClose: {:.1f} m away, leaving the conversation", distance);
