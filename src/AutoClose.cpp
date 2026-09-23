@@ -66,6 +66,7 @@ namespace AutoClose {
             bool armed{false};
             bool ignored{false};
             bool tooFarOnOpen{false};
+            bool refusedLogged{false};
             float minDistance{0.0f};
             std::chrono::steady_clock::time_point nextCheck{};
         };
@@ -218,6 +219,10 @@ namespace AutoClose {
         if (distance > g_maxDistance && leaving) {
             g_session.nextCheck = now + kRetryDelay;
             if (!CanExit(manager)) {
+                if (g_debug && !g_session.refusedLogged) {
+                    g_session.refusedLogged = true;
+                    REX::INFO("AutoClose: {:.1f} m away, but the game does not allow leaving", distance);
+                }
                 return;
             }
             g_lastExitSpeaker = speaker;
