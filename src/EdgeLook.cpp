@@ -49,6 +49,7 @@ namespace EdgeLook {
         bool g_enabled{false};
         bool g_debug{false};
         float g_edgeSize{0.0f};
+        float g_edgeSizeBottom{0.0f};
         float g_edgeSpeed{0.0f};
 
         LookEvent& g_event = *new LookEvent{};  // never destroyed
@@ -58,12 +59,12 @@ namespace EdgeLook {
         std::chrono::steady_clock::time_point g_lastFrame{};
         bool g_logged{false};
 
-        [[nodiscard]] float EdgePush(float a_position) noexcept {
-            if (a_position < g_edgeSize) {
-                return -(g_edgeSize - a_position) / g_edgeSize;
+        [[nodiscard]] float EdgePush(float a_position, float a_low, float a_high) noexcept {
+            if (a_position < a_low) {
+                return -(a_low - a_position) / a_low;
             }
-            if (a_position > 1.0f - g_edgeSize) {
-                return (a_position - (1.0f - g_edgeSize)) / g_edgeSize;
+            if (a_position > 1.0f - a_high) {
+                return (a_position - (1.0f - a_high)) / a_high;
             }
             return 0.0f;
         }
@@ -95,9 +96,10 @@ namespace EdgeLook {
         if (!a_settings.edgeRotation) {
             return true;
         }
-        if (!(a_settings.edgeSize > 0.0f && a_settings.edgeSize <= 0.5f && a_settings.edgeSpeed > 0.0f &&
-              a_settings.edgeSpeed <= 1000.0f)) {
-            REX::WARN("fEdgeSize must be in (0, 0.5] and fEdgeSpeed in (0, 1000], edge rotation disabled");
+        if (!(a_settings.edgeSize > 0.0f && a_settings.edgeSize <= 0.5f && a_settings.edgeSizeBottom > 0.0f &&
+              a_settings.edgeSizeBottom <= 0.5f && a_settings.edgeSpeed > 0.0f && a_settings.edgeSpeed <= 1000.0f)) {
+            REX::WARN(
+                "fEdgeSize and fEdgeSizeBottom must be in (0, 0.5], fEdgeSpeed in (0, 1000], edge rotation disabled");
             return false;
         }
 
@@ -116,6 +118,7 @@ namespace EdgeLook {
         g_enabled = true;
         g_debug = a_settings.debugLog;
         g_edgeSize = a_settings.edgeSize;
+        g_edgeSizeBottom = a_settings.edgeSizeBottom;
         g_edgeSpeed = a_settings.edgeSpeed;
         return true;
     }
@@ -142,8 +145,8 @@ namespace EdgeLook {
         float x{};
         float y{};
         const bool inside = CursorPosition(x, y);
-        const auto pushX = inside ? EdgePush(x) : 0.0f;
-        const auto pushY = inside ? EdgePush(y) : 0.0f;
+        const auto pushX = inside ? EdgePush(x, g_edgeSize, g_edgeSize) : 0.0f;
+        const auto pushY = inside ? EdgePush(y, g_edgeSize, g_edgeSizeBottom) : 0.0f;
         if (pushX == 0.0f && pushY == 0.0f) {
             g_carryX = 0.0f;
             g_carryY = 0.0f;

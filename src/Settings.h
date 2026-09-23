@@ -18,6 +18,7 @@ struct Settings {
 
     bool edgeRotation{true};
     float edgeSize{0.12f};
+    float edgeSizeBottom{0.03f};  // dialogue lines sit near the bottom
     float edgeSpeed{12.0f};
 
     static Settings Load(const std::filesystem::path& a_path);

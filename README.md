@@ -26,6 +26,7 @@ Requires [SFSE](https://sfse.silverlock.org/) and [Address Library for SFSE Plug
 | `fAutoCloseTolerance` | 6 | Extra distance for conversations started from further away |
 | `bEdgeRotation` | 1 | Look around with the mouse at the screen edges |
 | `fEdgeSize` | 0.12 | Width of the edge area, as a share of the screen |
+| `fEdgeSizeBottom` | 0.03 | Same for the bottom edge, kept thin so it stays clear of dialogue lines |
 | `fEdgeSpeed` | 12 | How fast the view turns |
 | `bDebugLog` | 0 | Write details to the log, for troubleshooting |
 

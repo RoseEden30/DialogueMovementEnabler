@@ -31,6 +31,7 @@ Settings Settings::Load(const std::filesystem::path& a_path) {
 
     settings.edgeRotation = ini.GetBoolValue("Camera", "bEdgeRotation", settings.edgeRotation);
     settings.edgeSize = readFloat("Camera", "fEdgeSize", settings.edgeSize);
+    settings.edgeSizeBottom = readFloat("Camera", "fEdgeSizeBottom", settings.edgeSizeBottom);
     settings.edgeSpeed = readFloat("Camera", "fEdgeSpeed", settings.edgeSpeed);
 
     return settings;
