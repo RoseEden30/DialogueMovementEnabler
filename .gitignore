@@ -1,0 +1,16 @@
+.idea
+.vs
+.vscode/settings.json
+
+out
+build
+install
+cmake-build*
+*.dll
+*.pdb
+
+CMakeUserPresets.json
+
+*.ba2
+*.zip
+*.7z

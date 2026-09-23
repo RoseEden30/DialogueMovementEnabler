@@ -1,0 +1,10 @@
+{
+    "dependencies": [
+        "simpleini",
+        {
+            "name": "spdlog",
+            "default-features": false,
+            "features": ["wchar"]
+        }
+    ]
+}

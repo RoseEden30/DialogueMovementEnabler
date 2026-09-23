@@ -1,0 +1,7 @@
+#pragma once
+
+namespace Version {
+    inline constexpr std::string_view NAME = "@PROJECT_NAME@";
+    inline constexpr std::string_view AUTHOR = "@PLUGIN_AUTHOR@";
+    inline constexpr REL::Version VERSION{@PROJECT_VERSION_MAJOR@, @PROJECT_VERSION_MINOR@, @PROJECT_VERSION_PATCH@, 0};
+}
