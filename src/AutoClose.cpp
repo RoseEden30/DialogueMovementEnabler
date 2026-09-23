@@ -122,7 +122,7 @@ namespace AutoClose {
             const auto player = reinterpret_cast<const std::byte*>(RE::PlayerCharacter::GetSingleton());
             if (player && (*reinterpret_cast<const std::uint32_t*>(player + kPlayerFlagsOffset) & kInSceneFlag)) {
                 const auto scenes = *reinterpret_cast<const void* const*>(player + kPlayerScenesOffset);
-                if (const auto scene = g_game.getScene(scenes)) {
+                if (const auto scene = scenes ? g_game.getScene(scenes) : nullptr) {
                     const auto source = *reinterpret_cast<const std::byte* const*>(scene + kSceneTemplateOffset);
                     const auto flags =
                         *reinterpret_cast<const std::uint32_t*>((source ? source : scene) + kSceneFlagsOffset);
