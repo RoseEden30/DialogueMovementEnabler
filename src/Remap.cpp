@@ -1,6 +1,7 @@
 #include "Remap.h"
 
 #include <RE/B/BSInputEventUser.h>
+#include <RE/P/PlayerCharacter.h>
 
 #include "AutoClose.h"
 #include "Bindings.h"
@@ -14,6 +15,7 @@ namespace Remap {
             constexpr REL::ID PlayerControlsVtable{433847};
             constexpr REL::ID PerformInputProcessing{82442};
             constexpr REL::ID UISingleton{937580};
+            constexpr REL::ID GetSitState{116731};  // Papyrus Actor.GetSitState
         }
 
         constexpr std::size_t kProcessSlot = 1;
@@ -23,8 +25,10 @@ namespace Remap {
         constexpr std::size_t kGameplayInputOffset = 0x539;
 
         using Process_t = void (*)(void*, RE::InputEvent*);
+        using GetSitState_t = std::int32_t (*)(void*, std::uint32_t, RE::Actor*);  // vm and stackID unused
 
         Process_t g_process{nullptr};
+        GetSitState_t g_getSitState{nullptr};
         const std::byte* const* g_ui{nullptr};
         bool g_debug{false};
         std::array<bool, std::to_underlying(Bindings::Group::kTotal)> g_allowed{};
@@ -63,7 +67,18 @@ namespace Remap {
             }
         }
 
+        // Moving out of furniture skips the stand-up animation.
+        [[nodiscard]] bool PlayerSeated() {
+            const auto player = RE::PlayerCharacter::GetSingleton();
+            return player && g_getSitState(nullptr, 0, player) != 0;
+        }
+
+        [[nodiscard]] bool Allowed(Bindings::Group a_group, bool a_seated) noexcept {
+            return g_allowed[std::to_underlying(a_group)] && (!a_seated || a_group == Bindings::Group::kPOV);
+        }
+
         std::uint32_t RenameMovementKeys(RE::InputEvent* a_head) {
+            const bool seated = PlayerSeated();
             std::uint32_t renamed = 0;
             for (auto* event = a_head; event; event = event->next) {
                 if (!event->HasIDCode()) {
@@ -76,7 +91,7 @@ namespace Remap {
                 }
                 auto& disabled = reinterpret_cast<std::uint8_t&>(id.disabled);
                 const auto& name = Bindings::NameOf(*action);
-                if (g_allowed[std::to_underlying(Bindings::GroupOf(*action))]) {
+                if (Allowed(Bindings::GroupOf(*action), seated)) {
                     id.strUserEvent = name;
                     disabled = 0;
                     renamed |= 1u << std::to_underlying(*action);
@@ -136,6 +151,7 @@ namespace Remap {
         g_allowed[std::to_underlying(Bindings::Group::kSneaking)] = a_settings.allowSneaking;
         g_allowed[std::to_underlying(Bindings::Group::kPOV)] = a_settings.allowPOVSwitch;
         g_ui = reinterpret_cast<const std::byte* const*>(ID::UISingleton.address());
+        g_getSitState = reinterpret_cast<GetSitState_t>(ID::GetSitState.address());
 
         g_process = VtableHook::Install<Process_t>(ID::PlayerControlsVtable, kProcessSlot, ID::PerformInputProcessing,
                                                    &OnProcess);
