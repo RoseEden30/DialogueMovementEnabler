@@ -6,7 +6,7 @@ Keep moving while you talk to people in Starfield, like *Dialogue Movement Enabl
 - Walk away and the conversation ends.
 - Push the cursor against a screen edge to look around.
 
-Movement keys no longer pick dialogue lines: use the mouse, arrow keys or number keys. The mod stays off with the accessibility dialogue camera, and while another menu such as barter is open.
+Movement keys no longer pick dialogue lines: use the mouse, arrow keys or number keys. The mod stays off when Dialogue Camera is turned on in Settings > Accessibility, and while another menu such as barter is open.
 
 Requires [SFSE](https://sfse.silverlock.org/) and [Address Library for SFSE Plugins](https://www.nexusmods.com/starfield/mods/3256). Built for Starfield 1.16.244; on another version, anything that no longer matches is turned off and logged.
 
