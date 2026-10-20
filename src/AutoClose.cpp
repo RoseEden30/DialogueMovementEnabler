@@ -139,11 +139,23 @@ namespace AutoClose {
             return true;
         }
 
-        void RequestExit() {
+        void ExitConversation(std::uint32_t a_speaker) {
+            const auto manager = ActiveManager();
+            if (!manager || Dialogue::IsCameraEnabled() ||
+                *reinterpret_cast<const std::uint32_t*>(manager + kSpeakerHandleOffset) != a_speaker ||
+                !CanExit(manager)) {
+                return;
+            }
+            g_lastExitSpeaker = a_speaker;
+            g_lastExitAt = std::chrono::steady_clock::now();
+            g_game.requestExit();
+        }
+
+        void RequestExit(std::uint32_t a_speaker) {
             if (const auto tasks = SFSE::GetTaskInterface()) {
-                tasks->AddTask([] { g_game.requestExit(); });
+                tasks->AddTask([a_speaker] { ExitConversation(a_speaker); });
             } else {
-                g_game.requestExit();
+                ExitConversation(a_speaker);
             }
         }
     }
@@ -190,12 +202,12 @@ namespace AutoClose {
         if (!g_inConversation || speaker != g_session.speaker) {
             g_inConversation = true;
             const bool restarted = speaker == g_lastExitSpeaker && now - g_lastExitAt < kRestartWindow;
-            g_session = Session{.speaker = speaker, .ignored = restarted || Dialogue::IsCameraEnabled()};
+            g_session = Session{.speaker = speaker, .ignored = restarted};
             if (restarted && g_debug) {
                 REX::INFO("AutoClose: conversation reopened by the game, left open");
             }
         }
-        if (g_session.ignored || now < g_session.nextCheck) {
+        if (g_session.ignored || Dialogue::IsCameraEnabled() || now < g_session.nextCheck) {
             return;
         }
         g_session.nextCheck = now + kInterval;
@@ -225,11 +237,9 @@ namespace AutoClose {
                 }
                 return;
             }
-            g_lastExitSpeaker = speaker;
-            g_lastExitAt = now;
-            RequestExit();
+            RequestExit(speaker);
             if (g_debug) {
-                REX::INFO("AutoClose: {:.1f} m away, leaving the conversation", distance);
+                REX::INFO("AutoClose: {:.1f} m away, requesting conversation exit", distance);
             }
             return;
         }

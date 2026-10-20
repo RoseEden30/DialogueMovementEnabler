@@ -47,14 +47,6 @@ namespace Remap {
             g_lastRenamed = 0;
             DragLook::Arm(false);
 
-            if (Dialogue::IsCameraEnabled()) {
-                g_active = false;
-                if (g_debug) {
-                    REX::INFO("Dialogue camera is on, conversation left as is");
-                }
-                return;
-            }
-
             const auto count = Bindings::Refresh();
             if (!count) {
                 g_active = false;
@@ -131,7 +123,7 @@ namespace Remap {
                 }
             }
 
-            if (!dialogue || !g_active || !GameplayInputAllowed()) {
+            if (!dialogue || !g_active || Dialogue::IsCameraEnabled() || !GameplayInputAllowed()) {
                 if (dialogue) {
                     DragLook::Cancel();
                 }
